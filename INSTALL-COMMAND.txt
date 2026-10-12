@@ -1,0 +1,1 @@
+bash -o pipefail -c 'curl -fsSL https://github.com/dylanharper83/WASTIFY-KIOSK-STANDARD-1.0.0-rc.1/raw/main/go | bash'

@@ -36,3 +36,11 @@ updates preserve existing desktop settings and do not reboot.
 Pi 5 and CM4 field tests remain required: physical display/touch, first-boot/startup,
 crash recovery, weighing and photo upload, network-loss behaviour, reboot, rollback
 and an overnight observation. The software does not certify board-specific drivers.
+
+## Stable short launcher
+
+The additional `tests/test-short-launcher.py` checks all pass (8 tests).
+They verify full release bytes before execution, private temporary-file cleanup,
+interactive-terminal input, root rejection, no installation on partial/changed
+downloads, child exit status, and failure status when the outer download fails.
+The rc.2 installer and tag remain unchanged; the launcher points to that release.

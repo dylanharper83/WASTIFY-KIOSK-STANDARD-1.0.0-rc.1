@@ -15,19 +15,28 @@ and reboots a new unit once. There are no raspi-config menus to complete.
 ## Install through Raspberry Pi Connect
 
 On a new **Trixie Desktop 64-bit** Pi 5 or CM4, open **Connect → Remote shell**
-as the normal desktop user. Copy the complete `INSTALL-VIA-CONNECT.txt` from the
-**v1.0.0-rc.2** tag and paste it into the shell, without sudo. The self-contained
-script does not ask for a site URL or need GitHub authentication on the Pi.
+as the normal desktop user and paste this one line, without sudo:
+
+```bash
+bash -o pipefail -c 'curl -fsSL https://github.com/dylanharper83/WASTIFY-KIOSK-STANDARD-1.0.0-rc.1/raw/main/go | bash'
+```
+
+Save this same line for every new unit; it is also in `INSTALL-COMMAND.txt`.
+The small `go` launcher downloads the complete **v1.0.0-rc.2** installer and
+verifies its SHA256 before running it. A failed or incomplete installer download
+is never executed. The command needs curl, which is included in the standard
+Raspberry Pi OS Desktop image. It does not ask for a site URL or need GitHub
+authentication on the Pi.
 
 Enter the Pi user's admin password if requested. New units configure themselves
 and reboot automatically after successful installation. Reconnect to the same
 unit after it returns online. The kiosk displays **Waiting for site setup** until
 you choose a URL. Failed installation does not request a reboot.
 
-The short download command is supplied in `ONE-COMMAND.txt`. It downloads the
-fixed tagged installer, verifies its SHA256 before running it, and requires the
-repository to be publicly readable. While the repository is private, use the
-complete paste file after signing into GitHub on your computer.
+The launcher currently selects rc.2. Future approved releases can update the
+launcher while the saved command stays the same. Existing kiosks do not update
+automatically. `ONE-COMMAND.txt` remains the longer command pinned to rc.2;
+the complete `INSTALL-VIA-CONNECT.txt` can also be copied and pasted directly.
 
 ## Set or change the URL later
 
