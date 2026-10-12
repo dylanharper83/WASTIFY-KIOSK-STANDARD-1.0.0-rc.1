@@ -517,7 +517,7 @@ class KioskTests(unittest.TestCase):
         digest = hashlib.sha256(payload).hexdigest()
         self.assertIn("hexdigest() != '" + digest + "'", text)
         files = json.loads(payload)
-        self.assertEqual(set(files), {'install.sh', 'wastify-kiosk/install.sh',
+        self.assertEqual(set(files), {'install.sh', 'desktop_setup.py', 'wastify-kiosk/install.sh',
                                      'wastify-kiosk/wastify_kiosk.py'})
         for name, content in files.items():
             self.assertEqual(content, (ROOT / name).read_text())

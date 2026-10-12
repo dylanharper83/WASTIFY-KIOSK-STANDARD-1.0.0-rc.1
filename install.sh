@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Wastify Kiosk 1.0.0-rc.1
-# Usage: bash install.sh [--deps] [--no-start] [HTTPS_URL]
+# Wastify Kiosk 1.0.0-rc.2
+# Usage: bash install.sh [--deps] [--setup-desktop] [--no-start] [HTTPS_URL]
 # Run as the desktop user from Raspberry Pi Connect, without sudo.
 set -Eeuo pipefail
 
@@ -9,16 +9,21 @@ CORE="$ROOT/wastify-kiosk/wastify_kiosk.py"
 KIOSK_COMMAND="$HOME/.local/bin/kiosk"
 INSTALL_DEPS=0
 ACTIVATE=1
+SETUP_DESKTOP=0
+FRESH_INSTALL=1
 URL_ARGS=()
 
 usage() {
   cat <<'HELP'
-Usage: bash install.sh [--deps] [--no-start] [HTTPS_URL]
+Usage: bash install.sh [--deps] [--setup-desktop] [--no-start] [HTTPS_URL]
 
   --deps      Install missing Chromium and curl packages only.
+  --setup-desktop  On a new installation, configure desktop boot, autologin
+                  and screen blanking automatically. Requires admin access.
   --no-start  Stage a new installation without enabling it. Updates retain
               the existing running and desktop-autostart state.
-  HTTPS_URL   Required on first install; omitted on updates to retain the URL.
+  HTTPS_URL   Optional. New installs show a waiting screen until kiosk url is set.
+              Omitted on updates to retain the URL.
 
 Run as the same normal user who logs into the Pi desktop, without sudo.
 First installs start automatically unless --no-start is supplied.
@@ -29,6 +34,7 @@ HELP
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --deps) INSTALL_DEPS=1 ;;
+    --setup-desktop) SETUP_DESKTOP=1 ;;
     --no-start) ACTIVATE=0 ;;
     -h|--help) usage; exit 0 ;;
     --*) printf 'Unknown option: %s\n' "$1" >&2; usage >&2; exit 2 ;;
@@ -71,6 +77,11 @@ invoke_core preflight
 # The core installer preserves an existing installation's state.
 if [[ -e "$HOME/.local/share/wastify-kiosk/wastify_kiosk.py" ]]; then
   ACTIVATE=0
+  FRESH_INSTALL=0
+fi
+
+if [[ "$SETUP_DESKTOP" -eq 1 && "$FRESH_INSTALL" -eq 1 ]]; then
+  python3 "$ROOT/desktop_setup.py" --check
 fi
 
 MISSING_PACKAGES=()
@@ -89,6 +100,9 @@ if [[ ${#MISSING_PACKAGES[@]} -gt 0 ]]; then
   sudo apt-get -o DPkg::Lock::Timeout=300 --no-remove install -y "${MISSING_PACKAGES[@]}"
 fi
 
+if [[ "$SETUP_DESKTOP" -eq 1 && "$FRESH_INSTALL" -eq 1 ]]; then
+  python3 "$ROOT/desktop_setup.py"
+fi
 invoke_core install
 if [[ "$ACTIVATE" -eq 1 ]]; then
   if ! "$KIOSK_COMMAND" enable; then
@@ -108,5 +122,6 @@ For commands in this Connect shell, run:
 The next desktop login or reboot normally includes ~/.local/bin automatically.
 Until then, new terminals may also need that export or ~/.local/bin/kiosk.
 Check the unit with: kiosk status
+Set the site later with: kiosk url 'https://your-site-url'
 Commission the physical screen, touch, camera and scale before site use.
 NEXT

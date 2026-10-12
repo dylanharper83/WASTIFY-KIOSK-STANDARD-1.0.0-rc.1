@@ -13,9 +13,9 @@ import subprocess
 import sys
 import tempfile
 import time
-from urllib.parse import urlsplit
+from urllib.parse import quote, urlsplit
 
-VERSION = '1.0.0-rc.1'
+VERSION = '1.0.0-rc.2'
 MARKER = '# Managed by Wastify Kiosk'
 UNIT = 'wastify-field-kiosk.service'
 LEGACY = ('wastify-kiosk.service', 'wastify-simple-kiosk.service', 'kiosk.service',
@@ -23,6 +23,11 @@ LEGACY = ('wastify-kiosk.service', 'wastify-simple-kiosk.service', 'kiosk.servic
           'wastify-network-recovery.service', 'wastify-maintenance.timer',
           'wastify-maintenance.service', 'wastify-scale-autoconnect.timer',
           'wastify-scale-autoconnect.service')
+WAITING_PAGE = 'data:text/html;charset=utf-8,' + quote('''<!doctype html>
+<html lang="en"><meta charset="utf-8"><title>Wastify Kiosk</title>
+<style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#10251e;
+color:#fff;font-family:Arial,sans-serif;text-align:center}h1{font-size:42px}p{font-size:24px}</style>
+<main><h1>Wastify kiosk ready</h1><p>Waiting for site setup</p></main></html>''')
 
 
 def run(args, check=True, **kwargs):
@@ -95,7 +100,8 @@ class Layout:
         config = json.loads(self.config.read_text())
         if not isinstance(config, dict) or 'url' not in config:
             raise ValueError('Invalid kiosk configuration; restore a backup before starting.')
-        validate_url(config['url'])
+        if config['url'] is not None:
+            validate_url(config['url'])
         return config
 
     def check_owned(self):
@@ -205,9 +211,7 @@ def preflight(layout, url):
     layout.check_owned()
     if url is None:
         url = layout.read()['url'] if layout.config.exists() else None
-    if not url:
-        raise ValueError('Supply this unit\'s HTTPS site URL on first installation.')
-    return validate_url(url)
+    return validate_url(url) if url is not None else None
 
 
 def install(layout, url):
@@ -272,7 +276,7 @@ def launch(layout):
     try:
         session_ready()
         check_conflicts()
-        url = validate_url(layout.read()['url'])
+        url = layout.read()['url'] or WAITING_PAGE
         layout.profile.mkdir(parents=True, exist_ok=True, mode=0o700)
         # Chromium owns its singleton lock. Never delete it or risk reusing another instance.
         singleton = layout.profile / 'SingletonLock'
@@ -370,10 +374,14 @@ def diagnostic_report(layout):
         report['network_devices'] = ['unavailable']
     if layout.config.exists() and shutil.which('curl'):
         try:
+            site_url = layout.read()['url']
+            if site_url is None:
+                report['site_http'] = 'not configured'
+                return report
             result = run(['curl', '--silent', '--location', '--proto', '=https',
                           '--proto-redir', '=https', '--connect-timeout', '5', '--max-time', '10',
                           '--output', '/dev/null', '--write-out', '%{http_code}',
-                          '--url', layout.read()['url']], check=False, capture_output=True, timeout=12)
+                          '--url', site_url], check=False, capture_output=True, timeout=12)
             report['site_http'] = result.stdout.strip() if result.returncode == 0 else 'unreachable'
         except subprocess.TimeoutExpired:
             report['site_http'] = 'timed out'
@@ -406,7 +414,7 @@ def main():
     if args.action == 'help':
         print('Wastify Kiosk ' + VERSION + '\n'
               'kiosk status | start | stop | restart | enable | disable\n'
-              'kiosk url [HTTPS_URL]       Show or change this unit\'s site\n'
+              'kiosk url [HTTPS_URL]       Show or change this unit\'s site (set after installation)\n'
               'kiosk wifi                 NetworkManager text menu (keyboard)\n'
               'kiosk check | logs | support | version\n'
               'kiosk update PACKAGE_DIR   Apply a downloaded, verified release\n'
@@ -418,7 +426,7 @@ def main():
         print(VERSION)
         return 0
     if os.geteuid() == 0:
-        raise ValueError('Run as the desktop user, without sudo. Only Wi-Fi or dependency setup requests sudo.')
+        raise ValueError('Run as the desktop user, without sudo. Installation and Wi-Fi may request admin access.')
     home = str(Path.home())
     if not re.fullmatch(r'/[A-Za-z0-9_./-]+', home):
         raise ValueError('Home path contains unsupported characters.')
@@ -485,7 +493,7 @@ def main():
             print('Kiosk stopped. ' + ('Desktop autostart disabled.' if args.action == 'disable' else 'Desktop autostart unchanged.'))
         elif args.action == 'status':
             print(f'Wastify Kiosk {VERSION}; autostart: {layout.enabled.exists()}')
-            print('URL:', layout.read()['url'])
+            print('URL:', layout.read()['url'] or 'Not set — waiting for site setup')
             ctl('--no-pager', '--full', 'status', UNIT, check=False)
             print('Running does not prove physical-screen health. See logs if startup failed.')
         elif args.action == 'logs':
@@ -497,7 +505,7 @@ def main():
                 atomic(layout.config, json.dumps(config, indent=2) + '\n')
                 if active():
                     ctl('restart', UNIT)
-            print(config['url'])
+            print(config['url'] or 'Not set. Use: kiosk url \'https://your-site-url\'')
         elif args.action == 'wifi':
             wifi()
         elif args.action == 'rollback':

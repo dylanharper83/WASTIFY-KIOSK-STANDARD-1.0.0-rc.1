@@ -1,17 +1,23 @@
-WASTIFY KIOSK STANDARD — 1.0.0-rc.1 (candidate)
+WASTIFY KIOSK STANDARD — 1.0.0-rc.2 (candidate)
 
 One package: Raspberry Pi 5 and CM4 / Waveshare units.
 Required baseline: Raspberry Pi OS Trixie Desktop 64-bit, working Wayland
-screen/touch drivers, Desktop Autologin, screen blanking off, and Raspberry Pi
-Connect linked to the same desktop account used for installation.
+screen/touch drivers, and Raspberry Pi Connect linked to the same desktop
+account used for installation.
 
 INSTALL THROUGH CONNECT
 1. Open INSTALL-VIA-CONNECT.txt on your computer and copy the entire block.
 2. Open the correct Pi in Raspberry Pi Connect > Remote shell.
 3. Paste the block as the normal desktop user, without sudo.
-4. Enter this unit's HTTPS site URL, e.g. https://touch.wastify.co.uk/SITE_CODE.
-5. If dependencies are missing, approve the displayed apt installation via sudo.
-6. Use Connect screen sharing to sign in and grant camera/scale permissions.
+4. Enter the Pi user's admin password if requested. No site URL is requested.
+5. Desktop boot, autologin and blanking are set automatically on a new install.
+6. The new unit reboots once. Reconnect to the same unit in Connect.
+7. Set the URL later: kiosk url 'https://touch.wastify.co.uk/YOUR_SITE_CODE'
+8. Use Connect screen sharing to sign in and grant camera/scale permissions.
+
+Until a URL is set, the kiosk displays a local Waiting for site setup screen.
+Existing installations keep their URL and enabled/running state; their desktop
+settings are not changed and the paste installer does not reboot them.
 
 COMMON COMMANDS (on site or in Connect)
 kiosk status                 Show version, URL, service and boot setting

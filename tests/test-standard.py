@@ -178,6 +178,49 @@ class StandardTests(unittest.TestCase):
         self.assertFalse(any(call[0] in ('start', 'stop', 'restart', 'enable', 'disable',
                                         'import-environment', 'daemon-reload') for call in self.control_calls))
 
+    def test_first_install_accepts_no_site_without_mutation(self):
+        before = tree(self.layout.home)
+        self.assertIsNone(wk.preflight(self.layout, None))
+        self.assertEqual(tree(self.layout.home), before)
+
+    def test_unconfigured_kiosk_launches_local_waiting_page(self):
+        self.install(None)
+        self.assertIsNone(self.layout.read()['url'])
+        with patch.object(wk, 'session_ready'), patch.object(wk, 'check_conflicts'), \
+                patch.object(wk.os, 'execv') as execute:
+            wk.launch(self.layout)
+        arguments = execute.call_args.args[1]
+        self.assertEqual(arguments[-1], wk.WAITING_PAGE)
+        self.assertTrue(arguments[-1].startswith('data:text/html;'))
+        self.assertNotIn('https://touch.wastify', arguments[-1])
+
+    def test_unconfigured_diagnostics_never_contacts_a_site(self):
+        self.install(None)
+        self.run_calls.clear()
+        self.assertEqual(wk.diagnostic_report(self.layout)['site_http'], 'not configured')
+        self.assertFalse(any(command[0] == 'curl' for command, _ in self.run_calls))
+
+    def test_site_can_be_set_after_install_and_restarts_running_waiting_screen(self):
+        self.install(None)
+        with patch.object(wk, 'active', return_value=True):
+            self.main('url', 'https://example.test/my-unit')
+        self.assertEqual(self.layout.read()['url'], 'https://example.test/my-unit')
+        self.assertIn(('restart', wk.UNIT), self.control_calls)
+
+    def test_invalid_later_site_leaves_waiting_configuration_unchanged(self):
+        self.install(None)
+        before = self.layout.config.read_bytes()
+        self.control_calls.clear()
+        with self.assertRaises(ValueError):
+            self.main('url', 'http://example.test/my-unit')
+        self.assertEqual(self.layout.config.read_bytes(), before)
+        self.assertNotIn(('restart', wk.UNIT), self.control_calls)
+
+    def test_reinstall_without_site_preserves_unconfigured_state(self):
+        self.install(None)
+        self.install(None)
+        self.assertIsNone(self.layout.read()['url'])
+
     def test_wrong_os_arch_or_lite_are_rejected(self):
         for field, value in (('os_release', 'VERSION_CODENAME=bookworm\n'),
                              ('arch', 'armhf'), ('desktop', False)):
