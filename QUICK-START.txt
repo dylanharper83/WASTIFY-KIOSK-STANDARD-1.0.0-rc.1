@@ -1,0 +1,59 @@
+WASTIFY KIOSK STANDARD — 1.0.0-rc.1 (candidate)
+
+One package: Raspberry Pi 5 and CM4 / Waveshare units.
+Required baseline: Raspberry Pi OS Trixie Desktop 64-bit, working Wayland
+screen/touch drivers, Desktop Autologin, screen blanking off, and Raspberry Pi
+Connect linked to the same desktop account used for installation.
+
+INSTALL THROUGH CONNECT
+1. Open INSTALL-VIA-CONNECT.txt on your computer and copy the entire block.
+2. Open the correct Pi in Raspberry Pi Connect > Remote shell.
+3. Paste the block as the normal desktop user, without sudo.
+4. Enter this unit's HTTPS site URL, e.g. https://touch.wastify.co.uk/SITE_CODE.
+5. If dependencies are missing, approve the displayed apt installation via sudo.
+6. Use Connect screen sharing to sign in and grant camera/scale permissions.
+
+COMMON COMMANDS (on site or in Connect)
+kiosk status                 Show version, URL, service and boot setting
+kiosk stop                   Exit to desktop until start or next desktop login
+kiosk start                  Open kiosk now
+kiosk restart                Restart browser, preserve saved profile
+kiosk disable                Stop and keep off at future desktop logins
+kiosk enable                 Start now and at future desktop logins
+kiosk url 'https://...'       Change unit URL; restarts if currently running
+kiosk wifi                   Keyboard text menu; timed network rollback
+kiosk check                  Inspect network, storage and device detection
+kiosk logs                   Recent service logs
+kiosk support                Save private diagnostic JSON without site URL/secrets
+kiosk help                   Show commands, update and rollback usage
+
+If kiosk is not found: ~/.local/bin/kiosk status
+For touch-only Wi-Fi setup: kiosk stop, use the OS desktop network menu, then start.
+The text Wi-Fi menu needs an interactive terminal; finish and confirm its network
+change within 180 seconds. The menu closes automatically after 150 seconds. NetworkManager attempts rollback if unconfirmed.
+
+FINISH WEIGHING/UPLOADING BEFORE RESTARTS, URL CHANGES OR UPDATES.
+
+UPDATES
+Use a tested versioned release. `kiosk update /path/to/extracted-release` retains
+the URL and enabled/running setting; a running kiosk restarts during the update.
+`kiosk rollback` restores prior code and leaves the browser stopped, retaining
+the current URL/profile. Then use kiosk start. The first installation has no prior
+release to roll back to; kiosk uninstall removes its integration and keeps data.
+
+FIRST-UNIT CHECKS
+On one Pi 5 and one CM4, verify physical screen/touch, scale reading, a newly
+saved weight and photo, stop/start, reboot, network loss/recovery and rollback.
+Observe each through a full working day and overnight before wider rollout.
+The package is locally checked, not yet field tested on either hardware family.
+
+OPERATING LIMITS
+Board-specific drivers are prepared separately. Legacy kiosk/recovery services
+must be retired deliberately before installation; the installer refuses conflicts.
+Each unit gets a dedicated persistent Chromium profile; old browser permissions
+and unsynced records are not automatically moved into it.
+Systemd recovers exited Chromium within a three-start/five-minute retry budget.
+Once exhausted, kiosk restart resets that budget. There is no network watchdog or
+automatic page reload after an outage; the PWA handles offline operation. An
+uncached startup page may need kiosk restart once internet returns.
+Device detection and HTTP status cannot verify a working app or physical panel.
